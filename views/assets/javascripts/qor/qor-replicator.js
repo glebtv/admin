@@ -18,7 +18,6 @@
     var EVENT_DISABLE = 'disable.' + NAMESPACE;
     var EVENT_CLICK = 'click.' + NAMESPACE;
     var EVENT_REPLICATOR_ADDED = 'added.' + NAMESPACE;
-    var IS_TEMPLATE = 'is-template';
 
     function QorReplicator(element, options) {
         this.$element = $(element);
@@ -31,18 +30,17 @@
         constructor: QorReplicator,
 
         init: function() {
-            var $this = this.$element;
-            var options = this.options;
-            var $all = $this.find(options.itemClass);
-            var $template;
-            this.isMultipleTemplate = $this.data().isMultiple;
+            this.initTemplate();
+        },
 
-            if (!$all.length) {
-                return;
-            }
+        initTemplate: function() {
+            var $this = this.$element,
+                options = this.options,
+                $allItems = $this.children(options.childrenClass).children(options.itemClass),
+                $newItems = $allItems.filter(options.newClass),
+                $template = $allItems.length ? ($newItems.length ? $newItems : '') : '';
 
-            $template = $all.filter(options.newClass);
-            if (!$template.length) {
+            if (!$template) {
                 return;
             }
 
@@ -50,22 +48,11 @@
             $template.trigger('disable');
 
             this.$template = $template;
-            var $filteredTemplateHtml = $template.filter($this.children(options.childrenClass).children(options.newClass));
-
-            if (this.isMultipleTemplate) {
-                this.$template = $filteredTemplateHtml;
-                if ($this.children(options.childrenClass).children(options.itemClass).size()) {
-                    this.template = $filteredTemplateHtml.prop('outerHTML');
-                    this.parse();
-                }
-            } else {
-                this.template = $filteredTemplateHtml.prop('outerHTML');
-                $template.data(IS_TEMPLATE, true).hide();
-                this.parse();
-            }
+            this.template = $template.prop('outerHTML');
+            this.parse();
 
             // remove hidden empty template, make sure no empty data submit to DB
-            $filteredTemplateHtml.remove();
+            $template.remove();
 
             this.bind();
         },
@@ -116,7 +103,7 @@
                 parents = $target.closest(options.selector),
                 parentsChildren = parents.children(options.childrenClass),
                 isMultipleTemplate = parents.data().isMultiple,
-                $item = this.$template,
+                $item,
                 $muptipleTargetTempalte,
                 $childrenFieldset = $target.closest(options.childrenClass).children('fieldset'),
                 multipleTemplates = {};
@@ -129,7 +116,7 @@
                 $muptipleTargetTempalte = multipleTemplates[templateName];
                 this.template = $muptipleTargetTempalte.prop('outerHTML');
                 this.parse(true);
-                $item = $(this.template.replace(/\{\{index\}\}/g, ++this.index));
+                $item = $(this.template.replace(/\{\{index\}\}/g, this.index));
 
                 for (var dataKey in $target.data()) {
                     if (dataKey.match(/^sync/)) {
@@ -144,13 +131,17 @@
                     // If user delete all template
                     parentsChildren.prepend($item.show());
                 }
+                this.index++;
             } else { //For individual fieldset tempalte 
                 $item = $(this.template.replace(/\{\{index\}\}/g, this.index));
                 $target.before($item.show());
                 this.index++;
             }
 
-            $item && $item.trigger('enable');
+            console.log($item);
+
+            $item.trigger('enable');
+
             $(document).trigger(EVENT_REPLICATOR_ADDED, [$item]);
             return false;
         },
@@ -221,10 +212,10 @@
             childrenClass: '.qor-field__block',
             undoClass: '.qor-fieldset__undo',
             alertTemplate: (
-                '<div class="qor-fieldset__alert">' +
-                '<input type="hidden" name="{{name}}._destroy" value="1">' +
-                '<button class="mdl-button mdl-button--accent mdl-js-button mdl-js-ripple-effect qor-fieldset__undo" type="button">Undo delete</button>' +
-                '</div>'
+                `<div class="qor-fieldset__alert">
+                    <input type="hidden" name="{{name}}._destroy" value="1">
+                    <button class="mdl-button mdl-button--accent mdl-js-button mdl-js-ripple-effect qor-fieldset__undo" type="button">Undo delete</button>
+                </div>`
             )
         };
 

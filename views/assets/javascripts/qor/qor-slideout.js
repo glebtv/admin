@@ -514,7 +514,7 @@
 
     QorSlideout.TEMPLATE_LOADING = (
         `<div class="qor-body__loading"></div>`
-    )
+    );
 
     QorSlideout.plugin = function(options) {
         return this.each(function() {
